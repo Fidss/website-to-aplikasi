@@ -1,4 +1,4 @@
-name: Build APK from WebView
+name: Build WebView APK
 
 on:
   workflow_dispatch:
@@ -12,17 +12,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout source code
+      uses: actions/checkout@v3
 
-    - uses: subosito/flutter-action@v2
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.1'  # ✅ Versi Flutter yang support Dart 3.8.1
+        flutter-version: '3.22.1'  # ✅ Versi yang mendukung Dart ^3.8.1
+
+    - name: Show Flutter and Dart version (debug)
+      run: |
+        flutter doctor -v
+        flutter --version
+        dart --version
 
     - name: Install dependencies
       run: flutter pub get
 
-    - name: Build APK with URL
-      run: flutter build apk --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
+    - name: Build release APK with web URL
+      run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
