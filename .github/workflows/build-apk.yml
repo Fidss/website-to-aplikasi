@@ -16,7 +16,7 @@ jobs:
 
     - uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.1'
+        flutter-version: '3.22.1'  # ✅ Versi Flutter yang support Dart 3.8.1
 
     - name: Install dependencies
       run: flutter pub get
