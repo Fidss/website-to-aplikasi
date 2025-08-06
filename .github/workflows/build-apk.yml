@@ -35,5 +35,5 @@ jobs:
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: "apk-${{ github.event.inputs.weburl }}"
+        name: "apk-${{ github.run_id }}"
         path: build/app/outputs/flutter-apk/app-release.apk
