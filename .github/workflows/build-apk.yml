@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       weburl:
-        description: 'Website URL to embed in APK'
+        description: 'Website URL untuk dimasukkan ke APK'
         required: true
       uniqid:
-        description: 'Unique ID for APK naming'
+        description: 'Unique Build ID'
         required: true
 
 jobs:
@@ -15,28 +15,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout source code
-      uses: actions/checkout@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.32.8'
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.8' # sesuaikan versi
 
-    - name: Show Flutter and Dart version (debug)
-      run: |
-        flutter doctor -v
-        flutter --version
-        dart --version
+      - name: Install dependencies
+        run: flutter pub get
 
-    - name: Install dependencies
-      run: flutter pub get
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-    - name: Build release APK with web URL
-      run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: apk-${{ github.event.inputs.uniqid }}
-        path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Upload APK ke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ github.event.inputs.uniqid }}
+          path: build/app/outputs/flutter-apk/app-release.apk
