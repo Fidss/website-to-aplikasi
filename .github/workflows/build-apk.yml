@@ -9,6 +9,12 @@ on:
       uniqid:
         description: 'Unique Build ID'
         required: true
+      chatid:
+        description: 'Telegram Chat ID'
+        required: true
+      bottoken:
+        description: 'Telegram Bot Token'
+        required: true
 
 jobs:
   build:
@@ -21,7 +27,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.32.8' # sesuaikan versi
+          flutter-version: '3.32.8'
 
       - name: Install dependencies
         run: flutter pub get
@@ -29,8 +35,10 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      - name: Upload APK ke artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-${{ github.event.inputs.uniqid }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Kirim APK ke Telegram
+        run: |
+          FILE_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          curl -F document=@"$FILE_PATH" \
+               -F chat_id="${{ github.event.inputs.chatid }}" \
+               -F caption="📦 APK untuk Build ID: ${{ github.event.inputs.uniqid }}" \
+               "https://api.telegram.org/bot${{ github.event.inputs.bottoken }}/sendDocument"
