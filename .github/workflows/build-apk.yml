@@ -15,6 +15,14 @@ on:
       bottoken:
         description: 'Telegram Bot Token'
         required: true
+      appname:
+        description: 'Nama aplikasi'
+        required: true
+        default: 'My Flutter WebView App'
+      logourl:
+        description: 'URL logo PNG (512x512)'
+        required: true
+        default: 'https://example.com/logo.png'
 
 jobs:
   build:
@@ -32,6 +40,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Download custom logo
+        run: |
+          mkdir -p assets/icon
+          curl -L ${{ github.event.inputs.logourl }} -o assets/icon/app_icon.png
+          ls -lh assets/icon/app_icon.png
+
+      - name: Generate launcher icons
+        run: flutter pub run flutter_launcher_icons:main
+
+      - name: Replace app name in AndroidManifest.xml
+        run: |
+          sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
+
+      - name: Replace app name in Info.plist (iOS)
+        run: |
+          plutil -replace CFBundleName -string "${{ github.event.inputs.appname }}" ios/Runner/Info.plist
+
       - name: Build release APK
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
@@ -40,5 +65,6 @@ jobs:
           FILE_PATH="build/app/outputs/flutter-apk/app-release.apk"
           curl -F document=@"$FILE_PATH" \
                -F chat_id="${{ github.event.inputs.chatid }}" \
-               -F caption="📦 APK untuk Build ID: ${{ github.event.inputs.uniqid }}" \
+               -F caption="📦 APK untuk Build ID: ${{ github.event.inputs.uniqid }} - ${{
+                  github.event.inputs.appname }}" \
                "https://api.telegram.org/bot${{ github.event.inputs.bottoken }}/sendDocument"
