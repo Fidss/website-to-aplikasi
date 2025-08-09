@@ -35,11 +35,8 @@ jobs:
     - name: Build release APK with web URL
       run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-    - name: Rename APK with uniqid
-      run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/app-${{ github.event.inputs.uniqid }}.apk
-
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: "apk-${{ github.event.inputs.uniqid }}"
-        path: build/app/outputs/flutter-apk/app-${{ github.event.inputs.uniqid }}.apk
+        name: ${{ github.event.inputs.artifactname }}
+        path: build/app/outputs/flutter-apk/app-release.apk
