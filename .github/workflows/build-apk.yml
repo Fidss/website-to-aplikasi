@@ -1,4 +1,4 @@
-name: Build Flutter APK & AAB (Custom Name, Logo, Package Name Unik)
+name: Build Flutter APK & AAB with Custom Name, Logo, and Package Name
 
 on:
   workflow_dispatch:
@@ -6,19 +6,15 @@ on:
       weburl:
         description: 'WEB_URL untuk WebView'
         required: true
-        default: 'https://example.com'
       appname:
         description: 'Nama aplikasi'
         required: true
-        default: 'My Flutter App'
       applogo:
         description: 'URL logo PNG (512x512)'
         required: true
-        default: 'https://example.com/logo.png'
       packname:
         description: 'Package name unik (contoh: com.example.app)'
         required: true
-        default: 'com.example.myapp'
       uniqid:
         description: 'ID unik build'
         required: true
@@ -34,20 +30,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
       - uses: actions/checkout@v3
 
-      # Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.32.8'
 
-      # Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Download custom logo
       - name: Download custom logo
         run: |
           mkdir -p assets/icon
@@ -55,29 +47,28 @@ jobs:
           curl -L "${{ github.event.inputs.applogo }}" -o assets/icon/app_icon.png
           ls -lh assets/icon/app_icon.png
 
-      # Generate launcher icons
       - name: Generate launcher icons
         run: flutter pub run flutter_launcher_icons
 
-      # Replace app name in AndroidManifest.xml
-      - name: Replace app name
+      - name: Replace app name in AndroidManifest.xml
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      # Replace applicationId only (tidak rename folder Kotlin/Java)
-      - name: Replace applicationId only
+      - name: Replace package name only (Gradle Kotlin DSL)
         run: |
-          sed -i "s/applicationId \".*\"/applicationId \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle
+          # Ganti applicationId di build.gradle.kts
+          sed -i "s/applicationId = \".*\"/applicationId = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts
+          
+          # Update package di AndroidManifest.xml
+          OLD_PACKAGE=$(grep -oP 'package="\K[^"]+' android/app/src/main/AndroidManifest.xml)
+          sed -i "s/package=\"$OLD_PACKAGE\"/package=\"${{ github.event.inputs.packname }}\"/" android/app/src/main/AndroidManifest.xml
 
-      # Build APK
       - name: Build APK with custom WEB_URL
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      # Build AAB
       - name: Build AAB with custom WEB_URL
         run: flutter build appbundle --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      # Upload APK to server
       - name: Upload APK to server
         id: upload_apk
         run: |
@@ -87,7 +78,6 @@ jobs:
           echo "$RESPONSE"
           echo "url_apk=$(echo $RESPONSE | jq -r '.file_url')" >> $GITHUB_OUTPUT
 
-      # Upload AAB to server
       - name: Upload AAB to server
         id: upload_aab
         run: |
@@ -97,7 +87,6 @@ jobs:
           echo "$RESPONSE"
           echo "url_aab=$(echo $RESPONSE | jq -r '.file_url')" >> $GITHUB_OUTPUT
 
-      # Send download links via Telegram
       - name: Send download links via Telegram Bot
         run: |
           MESSAGE="🚀 *${{ github.event.inputs.appname }}* berhasil dibuild!\n"
