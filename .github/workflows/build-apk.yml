@@ -21,39 +21,57 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Clone repo
       - uses: actions/checkout@v3
 
+      # Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: stable
 
+      # Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
+      # Download custom logo
       - name: Download custom logo
         run: |
           mkdir -p assets/icon
           rm -f assets/icon/app_icon.png
-          curl -L ${{ github.event.inputs.logourl }} -o assets/icon/app_icon.png
+          curl -L "${{ github.event.inputs.logourl }}" -o assets/icon/app_icon.png
           ls -lh assets/icon/app_icon.png
 
+      # Generate launcher icons
       - name: Generate launcher icons
         run: flutter pub run flutter_launcher_icons:main
 
+      # Replace app name in AndroidManifest.xml
       - name: Replace app name in AndroidManifest.xml
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Replace app name in Info.plist (iOS)
+      # Replace app name in Info.plist (iOS)
+      - name: Replace app name in Info.plist
         run: |
           plutil -replace CFBundleName -string "${{ github.event.inputs.appname }}" ios/Runner/Info.plist
 
-      - name: Build APK with custom WEB_URL
+      # Build APK with custom WEB_URL
+      - name: Build APK
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      - name: Upload APK
+      # Upload APK as GitHub Artifact (opsional)
+      - name: Upload APK to GitHub Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: app-release.apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Send APK via Telegram
+      - name: Send APK via Telegram Bot
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendDocument" \
+          -F chat_id="${{ secrets.CHAT_ID }}" \
+          -F document="@build/app/outputs/flutter-apk/app-release.apk" \
+          -F caption="📦 *${{ github.event.inputs.appname }}* sudah jadi!\n🌐 WEB_URL: ${{ github.event.inputs.weburl }}" \
+          -F parse_mode="Markdown"
