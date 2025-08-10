@@ -108,7 +108,7 @@ class _WebViewScreenState extends State<WebViewScreen>
   WebViewController? _controller;
   bool _isOnline = true;
   bool _isLoading = true;
-  StreamSubscription<ConnectivityResult>? _connectivitySub;
+  StreamSubscription? _connectivitySub;
   late AnimationController _animController;
 
   @override
@@ -123,7 +123,11 @@ class _WebViewScreenState extends State<WebViewScreen>
 
   void _listenConnectivity() {
     _connectivitySub =
-        Connectivity().onConnectivityChanged.listen((result) async {
+        Connectivity().onConnectivityChanged.listen((results) async {
+      // Versi terbaru connectivity_plus mengembalikan List<ConnectivityResult>
+      final result =
+          results.isNotEmpty ? results.first : ConnectivityResult.none;
+
       final online = await _hasInternet();
       if (online != _isOnline) {
         setState(() {
@@ -185,7 +189,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                     .animate(CurvedAnimation(
                         parent: _animController, curve: Curves.easeInOut)),
                 child: Image.asset(
-                  'assets/icon/offline.png',
+                  'assets/icon/offline.png', // Path sesuai permintaan
                   width: 200,
                   height: 200,
                 ),
