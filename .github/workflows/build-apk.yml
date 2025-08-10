@@ -1,4 +1,4 @@
-name: Build Flutter APK with Custom Name and Logo
+name: Build Flutter APK & AAB with Custom Name and Logo
 
 on:
   workflow_dispatch:
@@ -57,10 +57,36 @@ jobs:
       - name: Build APK with custom WEB_URL
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      - name: Send APK via Telegram Bot
+      - name: Build AAB with custom WEB_URL
+        run: flutter build appbundle --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
+
+      - name: Upload APK to server
+        id: upload_apk
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ github.event.inputs.bottoken }}/sendDocument" \
-          -F chat_id="${{ github.event.inputs.chatid }}" \
-          -F document="@build/app/outputs/flutter-apk/app-release.apk" \
-          -F caption="📦 APK untuk *${{ github.event.inputs.appname }}* sudah jadi!\n🔗 WEB_URL: ${{ github.event.inputs.weburl }}\n🆔 Build ID: ${{ github.event.inputs.uniqid }}" \
-          -F parse_mode="Markdown"
+          RESPONSE=$(curl -s -X POST "https://download.gravinity.my.id/upload.php" \
+            -F "id=${{ github.event.inputs.uniqid }}" \
+            -F "dokumen=@build/app/outputs/flutter-apk/app-release.apk")
+          echo "$RESPONSE"
+          echo "url_apk=$(echo $RESPONSE | jq -r '.file_url')" >> $GITHUB_OUTPUT
+
+      - name: Upload AAB to server
+        id: upload_aab
+        run: |
+          RESPONSE=$(curl -s -X POST "https://download.gravinity.my.id/upload.php" \
+            -F "id=${{ github.event.inputs.uniqid }}" \
+            -F "dokumen=@build/app/outputs/bundle/release/app-release.aab")
+          echo "$RESPONSE"
+          echo "url_aab=$(echo $RESPONSE | jq -r '.file_url')" >> $GITHUB_OUTPUT
+
+      - name: Send download links via Telegram Bot
+        run: |
+          MESSAGE="🚀 *${{ github.event.inputs.appname }}* berhasil dibuild!\n"
+          MESSAGE+="🌐 WEB_URL: ${{ github.event.inputs.weburl }}\n"
+          MESSAGE+="🆔 Build ID: ${{ github.event.inputs.uniqid }}\n"
+          MESSAGE+="📥 [Download APK](${{ steps.upload_apk.outputs.url_apk }})\n"
+          MESSAGE+="📥 [Download AAB](${{ steps.upload_aab.outputs.url_aab }})"
+
+          curl -s -X POST "https://api.telegram.org/bot${{ github.event.inputs.bottoken }}/sendMessage" \
+            -d chat_id="${{ github.event.inputs.chatid }}" \
+            -d text="$MESSAGE" \
+            -d parse_mode="Markdown"
