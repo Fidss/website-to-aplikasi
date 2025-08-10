@@ -54,10 +54,6 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Replace app name in Info.plist (iOS)
-        run: |
-          plutil -replace CFBundleName -string "${{ github.event.inputs.appname }}" ios/Runner/Info.plist
-
       - name: Build APK with custom WEB_URL
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
