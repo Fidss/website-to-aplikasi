@@ -5,11 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart' as http;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Ambil nama aplikasi dari AndroidManifest.xml
   final packageInfo = await PackageInfo.fromPlatform();
   final appName = packageInfo.appName;
 
@@ -30,7 +29,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: appName, // Sinkron dengan AndroidManifest.xml
+      title: appName,
       debugShowCheckedModeBanner: false,
       home: SplashScreen(websiteUrl: websiteUrl),
     );
@@ -54,14 +53,11 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     );
-
     _animation = Tween<double>(begin: 0, end: 1).animate(_controller);
-
     _controller.forward();
 
     Timer(const Duration(seconds: 3), () {
@@ -86,8 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Center(
         child: FadeTransition(
           opacity: _animation,
-          child: Image.asset('assets/icon/app_icon.png',
-              width: 150, height: 150),
+          child: Image.asset('assets/icon/app_icon.png', width: 150, height: 150),
         ),
       ),
     );
@@ -124,10 +119,8 @@ class _WebViewScreenState extends State<WebViewScreen>
   void _listenConnectivity() {
     _connectivitySub =
         Connectivity().onConnectivityChanged.listen((results) async {
-      // Versi terbaru connectivity_plus mengembalikan List<ConnectivityResult>
       final result =
           results.isNotEmpty ? results.first : ConnectivityResult.none;
-
       final online = await _hasInternet();
       if (online != _isOnline) {
         setState(() {
@@ -149,13 +142,17 @@ class _WebViewScreenState extends State<WebViewScreen>
     }
   }
 
+  /// ✅ Cek internet dengan request HTTP ringan
   Future<bool> _hasInternet() async {
     try {
-      final uri = Uri.parse(widget.websiteUrl);
-      final host = uri.host;
-      if (host.isEmpty) return false;
-      final result = await InternetAddress.lookup(host);
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      final connectivity = await Connectivity().checkConnectivity();
+      if (connectivity.isEmpty ||
+          connectivity.first == ConnectivityResult.none) {
+        return false;
+      }
+      final response = await http.get(Uri.parse("https://www.google.com"))
+          .timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
     } catch (_) {
       return false;
     }
@@ -189,7 +186,7 @@ class _WebViewScreenState extends State<WebViewScreen>
                     .animate(CurvedAnimation(
                         parent: _animController, curve: Curves.easeInOut)),
                 child: Image.asset(
-                  'assets/icon/offline.png', // Path sesuai permintaan
+                  'assets/icon/offline.png',
                   width: 200,
                   height: 200,
                 ),
