@@ -3,75 +3,68 @@ name: Build Flutter APK with Custom Name and Logo
 on:
   workflow_dispatch:
     inputs:
-      appname:
-        description: 'Nama aplikasi'
-        required: true
-        default: 'My Flutter App'
-      logourl:
-        description: 'URL logo PNG (512x512)'
-        required: true
-        default: 'https://example.com/logo.png'
       weburl:
         description: 'WEB_URL untuk WebView'
         required: true
         default: 'https://example.com'
+      appname:
+        description: 'Nama aplikasi'
+        required: true
+        default: 'My Flutter App'
+      applogo:
+        description: 'URL logo PNG (512x512)'
+        required: true
+        default: 'https://example.com/logo.png'
+      uniqid:
+        description: 'ID unik build'
+        required: true
+      chatid:
+        description: 'Chat ID Telegram penerima APK'
+        required: true
+      bottoken:
+        description: 'Bot Token Telegram'
+        required: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # Clone repo
       - uses: actions/checkout@v3
 
-      # Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: stable
 
-      # Install dependencies
       - name: Install dependencies
         run: flutter pub get
 
-      # Download custom logo
       - name: Download custom logo
         run: |
           mkdir -p assets/icon
           rm -f assets/icon/app_icon.png
-          curl -L "${{ github.event.inputs.logourl }}" -o assets/icon/app_icon.png
+          curl -L "${{ github.event.inputs.applogo }}" -o assets/icon/app_icon.png
           ls -lh assets/icon/app_icon.png
 
-      # Generate launcher icons
       - name: Generate launcher icons
         run: flutter pub run flutter_launcher_icons:main
 
-      # Replace app name in AndroidManifest.xml
       - name: Replace app name in AndroidManifest.xml
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      # Replace app name in Info.plist (iOS)
-      - name: Replace app name in Info.plist
+      - name: Replace app name in Info.plist (iOS)
         run: |
           plutil -replace CFBundleName -string "${{ github.event.inputs.appname }}" ios/Runner/Info.plist
 
-      # Build APK with custom WEB_URL
-      - name: Build APK
+      - name: Build APK with custom WEB_URL
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
 
-      # Upload APK as GitHub Artifact (opsional)
-      - name: Upload APK to GitHub Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      # Send APK via Telegram
       - name: Send APK via Telegram Bot
         run: |
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendDocument" \
-          -F chat_id="${{ secrets.CHAT_ID }}" \
+          curl -s -X POST "https://api.telegram.org/bot${{ github.event.inputs.bottoken }}/sendDocument" \
+          -F chat_id="${{ github.event.inputs.chatid }}" \
           -F document="@build/app/outputs/flutter-apk/app-release.apk" \
-          -F caption="📦 *${{ github.event.inputs.appname }}* sudah jadi!\n🌐 WEB_URL: ${{ github.event.inputs.weburl }}" \
+          -F caption="📦 APK untuk *${{ github.event.inputs.appname }}* sudah jadi!\n🔗 WEB_URL: ${{ github.event.inputs.weburl }}\n🆔 Build ID: ${{ github.event.inputs.uniqid }}" \
           -F parse_mode="Markdown"
