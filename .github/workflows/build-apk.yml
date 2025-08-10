@@ -54,12 +54,11 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Replace package name only (Gradle Kotlin DSL)
+      - name: Replace namespace and applicationId in build.gradle.kts
         run: |
-          # Ganti applicationId di build.gradle.kts
-          sed -i "s/applicationId = \".*\"/applicationId = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts
+          sed -i "s/namespace = \".*\"/namespace = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts
+          sed -i "s/applicationId = \".*\"/applicationId = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts || true
           
-          # Update package di AndroidManifest.xml
           OLD_PACKAGE=$(grep -oP 'package="\K[^"]+' android/app/src/main/AndroidManifest.xml)
           sed -i "s/package=\"$OLD_PACKAGE\"/package=\"${{ github.event.inputs.packname }}\"/" android/app/src/main/AndroidManifest.xml
 
