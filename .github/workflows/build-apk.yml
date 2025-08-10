@@ -1,4 +1,4 @@
-name: Build Flutter APK & AAB with Custom Name, Logo, and Package Name
+name: Build Flutter APK & AAB with Custom Name, Logo, and Namespace Only
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         description: 'URL logo PNG (512x512)'
         required: true
       packname:
-        description: 'Package name unik (contoh: com.example.app)'
+        description: 'Namespace unik (contoh: com.example.app)'
         required: true
       uniqid:
         description: 'ID unik build'
@@ -54,13 +54,9 @@ jobs:
         run: |
           sed -i 's/android:label="[^"]*"/android:label="${{ github.event.inputs.appname }}"/' android/app/src/main/AndroidManifest.xml
 
-      - name: Replace namespace and applicationId in build.gradle.kts
+      - name: Replace namespace in build.gradle.kts only
         run: |
           sed -i "s/namespace = \".*\"/namespace = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts
-          sed -i "s/applicationId = \".*\"/applicationId = \"${{ github.event.inputs.packname }}\"/" android/app/build.gradle.kts || true
-          
-          OLD_PACKAGE=$(grep -oP 'package="\K[^"]+' android/app/src/main/AndroidManifest.xml)
-          sed -i "s/package=\"$OLD_PACKAGE\"/package=\"${{ github.event.inputs.packname }}\"/" android/app/src/main/AndroidManifest.xml
 
       - name: Build APK with custom WEB_URL
         run: flutter build apk --release --dart-define=WEB_URL=${{ github.event.inputs.weburl }}
@@ -90,7 +86,7 @@ jobs:
         run: |
           MESSAGE="🚀 *${{ github.event.inputs.appname }}* berhasil dibuild!\n"
           MESSAGE+="🌐 WEB_URL: ${{ github.event.inputs.weburl }}\n"
-          MESSAGE+="📦 Package Name: ${{ github.event.inputs.packname }}\n"
+          MESSAGE+="📦 Namespace: ${{ github.event.inputs.packname }}\n"
           MESSAGE+="🆔 Build ID: ${{ github.event.inputs.uniqid }}\n"
           MESSAGE+="📥 [Download APK](${{ steps.upload_apk.outputs.url_apk }})\n"
           MESSAGE+="📥 [Download AAB](${{ steps.upload_aab.outputs.url_aab }})"
